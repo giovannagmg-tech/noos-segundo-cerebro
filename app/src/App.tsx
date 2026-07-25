@@ -14,6 +14,10 @@ import Tasks from '@/pages/Tasks'
 import TasksEisenhower from '@/pages/TasksEisenhower'
 import Projects from '@/pages/Projects'
 import ProjectDetail from '@/pages/ProjectDetail'
+import Habits from '@/pages/Habits'
+import Goals from '@/pages/Goals'
+import Metrics from '@/pages/Metrics'
+import Rewards from '@/pages/Rewards'
 
 function App() {
   return (
@@ -33,6 +37,10 @@ function App() {
               <Route path="/tasks/eisenhower" element={<TasksEisenhower />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/projects/:id" element={<ProjectDetail />} />
+              <Route path="/habits" element={<Habits />} />
+              <Route path="/goals" element={<Goals />} />
+              <Route path="/metrics" element={<Metrics />} />
+              <Route path="/rewards" element={<Rewards />} />
             </Route>
             <Route path="/" element={<Navigate to="/notes" replace />} />
             <Route path="*" element={<Navigate to="/notes" replace />} />

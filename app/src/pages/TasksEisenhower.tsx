@@ -23,25 +23,17 @@ import { listAreas, type Area } from '@/lib/api/areas'
 import { listProjects, type ProjectWithProgress } from '@/lib/api/projects'
 import { listTasks, updateTask, type EisenhowerQuadrant, type TaskWithRelations } from '@/lib/api/tasks'
 
-const QUADRANTS: { id: EisenhowerQuadrant; roman: string; label: string; accent: string }[] = [
-  { id: 'urgent_important', roman: 'I', label: 'Urgente e importante', accent: 'text-red-600 dark:text-red-400' },
-  {
-    id: 'not_urgent_important',
-    roman: 'II',
-    label: 'Não urgente e importante',
-    accent: 'text-amber-600 dark:text-amber-400',
-  },
-  {
-    id: 'urgent_not_important',
-    roman: 'III',
-    label: 'Urgente e não importante',
-    accent: 'text-blue-600 dark:text-blue-400',
-  },
+// Cores validadas com o skill dataviz (validate_palette.js — CVD/contraste
+// OK nas duas superfícies) em vez de classes Tailwind escolhidas de olho.
+export const QUADRANTS: { id: EisenhowerQuadrant; roman: string; label: string; color: string }[] = [
+  { id: 'urgent_important', roman: 'I', label: 'Urgente e importante', color: 'var(--eq-q1)' },
+  { id: 'not_urgent_important', roman: 'II', label: 'Não urgente e importante', color: 'var(--eq-q2)' },
+  { id: 'urgent_not_important', roman: 'III', label: 'Urgente e não importante', color: 'var(--eq-q3)' },
   {
     id: 'not_urgent_not_important',
     roman: 'IV',
     label: 'Não urgente e não importante',
-    accent: 'text-emerald-600 dark:text-emerald-400',
+    color: 'var(--eq-q4)',
   },
 ]
 
@@ -225,11 +217,14 @@ function QuadrantZone({
     >
       <div className="flex items-center gap-2">
         <span
-          className={`flex size-5 items-center justify-center rounded-full text-xs font-bold ${quadrant.accent}`}
+          className="flex size-5 items-center justify-center rounded-full text-xs font-bold"
+          style={{ color: quadrant.color }}
         >
           {quadrant.roman}
         </span>
-        <h3 className={`text-sm font-medium ${quadrant.accent}`}>{quadrant.label}</h3>
+        <h3 className="text-sm font-medium" style={{ color: quadrant.color }}>
+          {quadrant.label}
+        </h3>
         <span className="ml-auto text-xs text-muted-foreground">{tasks.length}</span>
       </div>
       <div className="flex flex-col gap-1.5">

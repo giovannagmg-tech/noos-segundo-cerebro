@@ -32,6 +32,10 @@ const fase2Nav = [
   { to: '/tasks', label: 'Tarefas', end: true },
   { to: '/tasks/eisenhower', label: 'Eisenhower' },
   { to: '/projects', label: 'Projetos' },
+  { to: '/habits', label: 'Hábitos' },
+  { to: '/goals', label: 'Metas' },
+  { to: '/metrics', label: 'Métricas' },
+  { to: '/rewards', label: 'Recompensas' },
 ]
 
 export function AppShell() {
