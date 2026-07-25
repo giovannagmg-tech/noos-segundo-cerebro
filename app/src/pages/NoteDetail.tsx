@@ -3,8 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { NoteEditor } from '@/components/NoteEditor'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   Command,
@@ -271,16 +271,16 @@ export default function NoteDetail() {
   )
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6">
-      <div className="flex items-center justify-between">
+    <div className="mx-auto flex max-w-2xl flex-col gap-4 pb-20">
+      <div className="flex items-start justify-between gap-3">
         <Input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onBlur={saveTitle}
           placeholder="Título da nota"
-          className="border-none px-0 text-2xl font-semibold shadow-none focus-visible:ring-0"
+          className="h-auto border-none px-0 text-4xl font-extrabold tracking-tight shadow-none focus-visible:ring-0"
         />
-        <span className="shrink-0 text-xs text-muted-foreground">
+        <span className="mt-3 shrink-0 text-xs text-muted-foreground">
           {saveState === 'saving' ? 'Salvando…' : saveState === 'saved' ? 'Salvo' : ''}
         </span>
       </div>
@@ -308,160 +308,176 @@ export default function NoteDetail() {
         </Popover>
       </div>
 
-      <Textarea
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
+      <NoteEditor
+        noteId={id!}
+        content={content}
+        onChange={setContent}
         onBlur={saveContent}
-        placeholder="Comece a escrever, ou cole do Notion/Obsidian. Use [[Título da Nota]] pra linkar outra nota."
-        rows={16}
-        className="font-mono text-sm"
+        placeholder="Comece a escrever, ou cole do Notion/Obsidian. Use [[Título da Nota]] pra linkar outra nota, ou cole/arraste uma imagem."
       />
 
-      <section className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium text-muted-foreground">Notas linkadas</h2>
-          <Popover open={linkPopoverOpen} onOpenChange={setLinkPopoverOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm">
-                + Link
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64 p-0" align="end">
-              <Command>
-                <CommandInput placeholder="Buscar nota…" />
-                <CommandList>
-                  <CommandEmpty>Nenhuma nota encontrada.</CommandEmpty>
-                  <CommandGroup>
-                    {linkableNotes.map((n) => (
-                      <CommandItem key={n.id} onSelect={() => handleAddLink(n.id)}>
-                        {n.title || 'Sem título'}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        </div>
-        {links.outgoing.length === 0 && links.incoming.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Nenhuma conexão ainda — use [[ ]] no texto ou o botão + Link.
-          </p>
-        ) : (
-          <ul className="flex flex-col divide-y rounded-lg border">
-            {links.outgoing.map((l) => (
-              <LinkRow
-                key={l.id}
-                title={l.target.title}
-                onOpen={() => navigate(`/notes/${l.target_note_id}`)}
-                onRemove={() => handleRemoveLink(l.id)}
-              />
-            ))}
-            {links.incoming.map((l) => (
-              <LinkRow
-                key={l.id}
-                title={l.source.title}
-                subtitle="menciona esta nota"
-                onOpen={() => navigate(`/notes/${l.source_note_id}`)}
-                onRemove={() => handleRemoveLink(l.id)}
-              />
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {suggestions.length > 0 && (
-        <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-medium text-muted-foreground">Sugestões da IA</h2>
-          <ul className="flex flex-col divide-y rounded-lg border">
-            {suggestions.map((s) => (
-              <li key={s.id} className="flex flex-col gap-2 px-4 py-3">
-                <div className="flex items-center justify-between gap-2">
-                  <button
-                    onClick={() => navigate(`/notes/${s.otherNoteId}`)}
-                    className="text-left text-sm font-medium hover:underline"
-                  >
-                    {s.otherNoteTitle}
-                  </button>
-                  {s.score !== null && (
-                    <span className="text-xs text-muted-foreground">
-                      {Math.round(s.score * 100)}% similar
-                    </span>
-                  )}
-                </div>
-                {s.reason && <p className="text-xs text-muted-foreground">{s.reason}</p>}
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={() => handleAcceptSuggestion(s)}>
-                    Aceitar
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => handleDismissSuggestion(s.id)}>
-                    Descartar
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
+      {/* Backlinks, sugestões e referências — like Obsidian, integradas ao
+          rodapé da página em vez de formulários separados. */}
+      <div className="mt-6 flex flex-col gap-6 border-t pt-6">
+        <section className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Notas linkadas
+            </h2>
+            <Popover open={linkPopoverOpen} onOpenChange={setLinkPopoverOpen}>
+              <PopoverTrigger asChild>
+                <button className="text-xs text-muted-foreground hover:text-foreground">+ Link</button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-0" align="end">
+                <Command>
+                  <CommandInput placeholder="Buscar nota…" />
+                  <CommandList>
+                    <CommandEmpty>Nenhuma nota encontrada.</CommandEmpty>
+                    <CommandGroup>
+                      {linkableNotes.map((n) => (
+                        <CommandItem key={n.id} onSelect={() => handleAddLink(n.id)}>
+                          {n.title || 'Sem título'}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+          {links.outgoing.length === 0 && links.incoming.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhuma conexão ainda — use [[ ]] no texto ou o botão + Link.
+            </p>
+          ) : (
+            <ul className="flex flex-col">
+              {links.outgoing.map((l) => (
+                <LinkRow
+                  key={l.id}
+                  title={l.target.title}
+                  onOpen={() => navigate(`/notes/${l.target_note_id}`)}
+                  onRemove={() => handleRemoveLink(l.id)}
+                />
+              ))}
+              {links.incoming.map((l) => (
+                <LinkRow
+                  key={l.id}
+                  title={l.source.title}
+                  subtitle="menciona esta nota"
+                  onOpen={() => navigate(`/notes/${l.source_note_id}`)}
+                  onRemove={() => handleRemoveLink(l.id)}
+                />
+              ))}
+            </ul>
+          )}
         </section>
-      )}
 
-      <section className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium text-muted-foreground">Referências externas</h2>
-          <Dialog open={refDialogOpen} onOpenChange={setRefDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
-                + Referência
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Nova referência externa</DialogTitle>
-              </DialogHeader>
-              <div className="flex flex-col gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="ref-label">Título / autor / curso</Label>
-                  <Input id="ref-label" value={refLabel} onChange={(e) => setRefLabel(e.target.value)} />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="ref-url">URL (opcional)</Label>
-                  <Input id="ref-url" value={refUrl} onChange={(e) => setRefUrl(e.target.value)} />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button onClick={handleAddReference}>Salvar</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-        {refs.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhuma referência externa ainda.</p>
-        ) : (
-          <ul className="flex flex-col divide-y rounded-lg border">
-            {refs.map((ref) => (
-              <li key={ref.id} className="flex items-center justify-between gap-2 px-4 py-2.5">
-                {ref.url ? (
-                  <a
-                    href={ref.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-sm underline-offset-2 hover:underline"
-                  >
-                    {ref.label}
-                  </a>
-                ) : (
-                  <span className="text-sm">{ref.label}</span>
-                )}
-                <button
-                  className="text-xs text-muted-foreground hover:text-foreground"
-                  onClick={() => handleRemoveReference(ref.id)}
-                >
-                  Remover
-                </button>
-              </li>
-            ))}
-          </ul>
+        {suggestions.length > 0 && (
+          <section className="flex flex-col gap-1.5">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Sugestões da IA
+            </h2>
+            <ul className="flex flex-col">
+              {suggestions.map((s) => (
+                <li key={s.id} className="flex flex-col gap-2 rounded-md px-2 py-2 hover:bg-muted/60">
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      onClick={() => navigate(`/notes/${s.otherNoteId}`)}
+                      className="text-left text-sm font-medium hover:underline"
+                    >
+                      {s.otherNoteTitle}
+                    </button>
+                    {s.score !== null && (
+                      <span className="text-xs text-muted-foreground">
+                        {Math.round(s.score * 100)}% similar
+                      </span>
+                    )}
+                  </div>
+                  {s.reason && <p className="text-xs text-muted-foreground">{s.reason}</p>}
+                  <div className="flex gap-3">
+                    <button
+                      className="text-xs font-medium text-primary hover:underline"
+                      onClick={() => handleAcceptSuggestion(s)}
+                    >
+                      Aceitar
+                    </button>
+                    <button
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                      onClick={() => handleDismissSuggestion(s.id)}
+                    >
+                      Descartar
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
-      </section>
+
+        <section className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Referências externas
+            </h2>
+            <Dialog open={refDialogOpen} onOpenChange={setRefDialogOpen}>
+              <DialogTrigger asChild>
+                <button className="text-xs text-muted-foreground hover:text-foreground">
+                  + Referência
+                </button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Nova referência externa</DialogTitle>
+                </DialogHeader>
+                <div className="flex flex-col gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="ref-label">Título / autor / curso</Label>
+                    <Input id="ref-label" value={refLabel} onChange={(e) => setRefLabel(e.target.value)} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="ref-url">URL (opcional)</Label>
+                    <Input id="ref-url" value={refUrl} onChange={(e) => setRefUrl(e.target.value)} />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button onClick={handleAddReference}>Salvar</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+          {refs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhuma referência externa ainda.</p>
+          ) : (
+            <ul className="flex flex-col">
+              {refs.map((ref) => (
+                <li
+                  key={ref.id}
+                  className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 hover:bg-muted/60"
+                >
+                  {ref.url ? (
+                    <a
+                      href={ref.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sm underline-offset-2 hover:underline"
+                    >
+                      {ref.label}
+                    </a>
+                  ) : (
+                    <span className="text-sm">{ref.label}</span>
+                  )}
+                  <button
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                    onClick={() => handleRemoveReference(ref.id)}
+                  >
+                    Remover
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
     </div>
   )
 }
@@ -478,7 +494,7 @@ function LinkRow({
   onRemove: () => void
 }) {
   return (
-    <li className="flex items-center justify-between gap-2 px-4 py-2.5">
+    <li className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 hover:bg-muted/60">
       <button onClick={onOpen} className="flex-1 text-left text-sm hover:underline">
         {title || 'Sem título'}
         {subtitle && <span className="ml-2 text-xs text-muted-foreground">({subtitle})</span>}

@@ -151,3 +151,84 @@
     @apply font-sans;
     }
 }
+
+/* Editor de notas (TipTap) — página fluida, sem caixa/borda visível.
+   Ver brand/README.md: título e corpo se integram, sem parecer formulário. */
+.noos-editor-content {
+  outline: none;
+  min-height: 40vh;
+  font-size: 1rem;
+  line-height: 1.75;
+  color: var(--foreground);
+}
+.noos-editor-content > * + * {
+  margin-top: 0.9em;
+}
+.noos-editor-content h1 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.25;
+  margin-top: 1.4em;
+}
+.noos-editor-content h2 {
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-top: 1.2em;
+}
+.noos-editor-content h3 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin-top: 1em;
+}
+.noos-editor-content ul,
+.noos-editor-content ol {
+  padding-left: 1.4em;
+}
+.noos-editor-content ul {
+  list-style: disc;
+}
+.noos-editor-content ol {
+  list-style: decimal;
+}
+.noos-editor-content blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 1em;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+.noos-editor-content code {
+  background: var(--muted);
+  border-radius: 4px;
+  padding: 0.15em 0.4em;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+.noos-editor-content pre {
+  background: var(--muted);
+  border-radius: var(--radius-md);
+  padding: 0.9em 1em;
+  overflow-x: auto;
+}
+.noos-editor-content pre code {
+  background: none;
+  padding: 0;
+}
+.noos-editor-content a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.noos-editor-content .noos-editor-image {
+  display: block;
+  max-width: 100%;
+  border-radius: var(--radius-lg);
+  margin: 0.5em 0;
+}
+.noos-editor-content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}

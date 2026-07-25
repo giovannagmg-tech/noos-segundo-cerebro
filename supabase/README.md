@@ -29,6 +29,13 @@ Projeto Supabase local (`npx supabase init`). O schema vive em `db/schemas.sql`
 10. `20260802000000_rls_hardening.sql` — checagem final de RLS: restringe
     toda policy a `TO authenticated` (defesa em profundidade) e revoga
     EXECUTE público de `handle_new_user()`.
+11. `20260803000000_media_library.sql` — tabelas `media`/`media_tags`
+    (imagens inseridas no editor das notas, com `note_id` de origem e tags
+    herdadas) + bucket de Storage `note-media` (leitura pública, escrita só
+    do dono — ver nota de segurança no topo do arquivo da migration) e as
+    policies de `storage.objects` correspondentes. Não precisa criar o
+    bucket manualmente no painel — a migration já faz o `insert into
+    storage.buckets`.
 
 **Antes de aplicar a migration 9**, configure os secrets do Vault (só uma
 vez, direto no SQL Editor — nunca cole a service_role key aqui no chat):

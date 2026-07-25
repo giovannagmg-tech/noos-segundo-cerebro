@@ -25,6 +25,7 @@ const fase1Nav = [
   { to: '/notes', label: 'Notas' },
   { to: '/graph', label: 'Grafo' },
   { to: '/tags', label: 'Tags' },
+  { to: '/media', label: 'Mídias' },
   { to: '/pomodoro', label: 'Pomodoro' },
   { to: '/capture', label: 'Captura rápida' },
 ]

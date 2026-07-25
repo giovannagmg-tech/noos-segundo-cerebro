@@ -225,6 +225,24 @@ Propósito: resumos e insights de progresso sobre metas e hábitos gerados pela 
 - `created_at` timestamptz NOT NULL default now()
 - Índices: `idx_ai_insights_user_created` (user_id, created_at desc).
 
+#### `media` — *extensão pós-lançamento*
+Propósito: cada imagem inserida (colar/arrastar) no editor de uma nota, com link de volta pra nota de origem.
+- `id` uuid PK default gen_random_uuid()
+- `user_id` uuid NOT NULL FK → profiles(id)
+- `note_id` uuid FK → notes(id) ON DELETE SET NULL (a mídia sobrevive à exclusão da nota, como anexos no Obsidian)
+- `storage_path` text NOT NULL UNIQUE (bucket `note-media`, path `{user_id}/{note_id}/{uuid}.ext`)
+- `public_url` text NOT NULL
+- `file_name`, `mime_type`, `size_bytes`
+- `created_at` timestamptz NOT NULL default now()
+- Índices: `idx_media_user` (user_id); `idx_media_note` (note_id).
+
+#### `media_tags` — *extensão pós-lançamento*
+Propósito: snapshot das tags que a nota tinha no momento do upload da imagem (não um vínculo ao vivo com `note_tags`).
+- `media_id` uuid NOT NULL FK → media(id) ON DELETE CASCADE
+- `tag_id` uuid NOT NULL FK → tags(id) ON DELETE CASCADE
+- `user_id` uuid NOT NULL FK → profiles(id)
+- PK composta (media_id, tag_id)
+
 ---
 
 ## 2. RLS e autenticação
@@ -235,6 +253,7 @@ Propósito: resumos e insights de progresso sobre metas e hábitos gerados pela 
 
 - **profiles**: SELECT/UPDATE apenas onde `id = auth.uid()`. INSERT feito pelo trigger (service role). DELETE bloqueado (só via admin).
 - **notes, tags, note_tags, note_links, external_references, link_suggestions, note_embeddings, pomodoro_sessions**: SELECT/INSERT/UPDATE/DELETE somente onde `user_id = auth.uid()`. Em `note_tags` o `user_id` desnormalizado permite a checagem direta sem join. `note_embeddings` e `link_suggestions` só recebem INSERT/UPDATE via **service role** (Edge Functions de IA), mas SELECT continua restrito ao dono.
+- **media, media_tags** *(extensão)*: SELECT/INSERT/UPDATE/DELETE somente onde `user_id = auth.uid()` — diferente de `note_embeddings`/`link_suggestions`, aqui é o próprio dono (via app, sem service role) quem grava, então não há restrição extra de INSERT. O bucket de Storage `note-media` é público pra leitura (decisão deliberada — path imprevisível, evita ter que reassinar URL a cada carregamento de nota) mas escrita/exclusão de arquivo seguem restritas ao dono via policy em `storage.objects`.
 - **life_areas, projects, tasks, habits, habit_logs, goals, rewards, calendar_events, ai_insights**: SELECT/INSERT/UPDATE/DELETE somente onde `user_id = auth.uid()`. `rewards` e `ai_insights` são escritos por Edge Functions/cron via service role (concessão automática); o dono só faz SELECT. `calendar_events` é escrito pela função de sync (service role) e pelo dono (edições locais → push).
 - **calendar_connections**: SELECT restrito ao dono; INSERT/UPDATE/DELETE de tokens apenas via **service role** (Edge Function de OAuth) — tokens nunca são manipulados direto pelo frontend.
 
@@ -275,6 +294,7 @@ Propósito: resumos e insights de progresso sobre metas e hábitos gerados pela 
 - `/notes/:id` — editor da nota: título, conteúdo markdown, tags, links para outras notas, referências externas e painel de sugestões da IA (`link_suggestions`).
 - `/graph` — grafo visual interativo das notas e conexões; filtro por tag/área; clique no nó abre a nota.
 - `/tags` — gestão das tags de área (marketing, branding, neurociência) e suas cores.
+- `/media` — *extensão pós-lançamento*: biblioteca global de imagens inseridas nas notas via editor, com a nota de origem (link clicável) e as tags herdadas.
 - `/pomodoro` — timer Pomodoro vinculável a uma nota, registrando `pomodoro_sessions`.
 - `/capture` — página enxuta mobile-first para captura rápida de nota (título + conteúdo), a organizar depois na web.
 

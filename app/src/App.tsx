@@ -8,6 +8,7 @@ import Notes from '@/pages/Notes'
 import NoteDetail from '@/pages/NoteDetail'
 import Graph from '@/pages/Graph'
 import Tags from '@/pages/Tags'
+import Media from '@/pages/Media'
 import Pomodoro from '@/pages/Pomodoro'
 import Capture from '@/pages/Capture'
 import Tasks from '@/pages/Tasks'
@@ -38,6 +39,7 @@ function App() {
               <Route path="/notes/:id" element={<NoteDetail />} />
               <Route path="/graph" element={<Graph />} />
               <Route path="/tags" element={<Tags />} />
+              <Route path="/media" element={<Media />} />
               <Route path="/pomodoro" element={<Pomodoro />} />
               <Route path="/tasks" element={<Tasks />} />
               <Route path="/tasks/eisenhower" element={<TasksEisenhower />} />

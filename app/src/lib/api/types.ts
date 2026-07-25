@@ -38,6 +38,20 @@ export type ExternalReference = {
 
 export type NoteWithTags = Note & { tags: Tag[] }
 
+export type Media = {
+  id: string
+  user_id: string
+  note_id: string | null
+  storage_path: string
+  public_url: string
+  file_name: string
+  mime_type: string | null
+  size_bytes: number | null
+  created_at: string
+}
+
+export type MediaWithContext = Media & { note_title: string | null; tags: Tag[] }
+
 export type SearchResult = {
   id: string
   title: string
