@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
 import { createNote } from '@/lib/api/notes'
+import { Logo } from '@/components/Logo'
 
 // Rota standalone, fora do AppShell de propósito — captura rápida é
 // "mobile-first" de verdade só sem sidebar/header/nav por cima.
@@ -69,8 +70,8 @@ export default function Capture() {
   return (
     <div className="flex min-h-svh flex-col bg-background">
       <header className="flex items-center justify-between border-b px-4 py-3">
-        <Link to="/notes" className="text-sm font-semibold tracking-tight">
-          noos
+        <Link to="/notes">
+          <Logo size={20} />
         </Link>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Alternar tema">

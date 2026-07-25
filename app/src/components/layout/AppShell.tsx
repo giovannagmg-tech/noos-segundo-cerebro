@@ -18,6 +18,7 @@ import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/use-auth'
+import { Logo } from '@/components/Logo'
 import { ThemeToggle } from './ThemeToggle'
 
 const fase1Nav = [
@@ -49,7 +50,7 @@ export function AppShell() {
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          <span className="px-2 py-1 text-lg font-semibold tracking-tight">Noos</span>
+          <Logo size={22} className="px-2 py-1" />
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
@@ -98,7 +99,7 @@ export function AppShell() {
           <div className="flex items-center gap-2">
             <SidebarTrigger />
             <Separator orientation="vertical" className="h-5" />
-            <span className="text-sm font-semibold tracking-tight sm:hidden">noos</span>
+            <Logo size={18} className="sm:hidden" />
           </div>
           <div className="flex items-center gap-1 sm:gap-3">
             <span className="hidden max-w-40 truncate text-sm text-muted-foreground sm:inline">

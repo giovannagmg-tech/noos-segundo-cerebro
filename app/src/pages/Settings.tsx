@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { AreaManagerDialog } from '@/components/AreaManagerDialog'
 import { useAuth } from '@/hooks/use-auth'
 import { supabase } from '@/lib/supabase'
+import { listAreas, type Area } from '@/lib/api/areas'
 import {
   connectGoogleCalendar,
   disconnectGoogleCalendar,
@@ -21,6 +23,20 @@ export default function Settings() {
   const { session } = useAuth()
   const [connected, setConnected] = useState<boolean | null>(null)
   const [connecting, setConnecting] = useState(false)
+  const [areas, setAreas] = useState<Area[] | null>(null)
+
+  const refreshAreas = useCallback(async () => {
+    try {
+      setAreas(await listAreas())
+    } catch (err) {
+      console.error(err)
+      toast.error('Falha ao carregar áreas da vida.')
+    }
+  }, [])
+
+  useEffect(() => {
+    refreshAreas()
+  }, [refreshAreas])
 
   async function refreshStatus() {
     try {
@@ -87,6 +103,38 @@ export default function Settings() {
       <section className="flex flex-col gap-2">
         <h2 className="text-sm font-medium text-muted-foreground">Perfil</h2>
         <div className="rounded-lg border p-4 text-sm">{session?.user.email}</div>
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium text-muted-foreground">Áreas da vida</h2>
+          <AreaManagerDialog onChanged={refreshAreas} />
+        </div>
+        <div className="rounded-lg border p-4">
+          {areas === null ? (
+            <Skeleton className="h-5 w-48" />
+          ) : areas.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhuma área ainda — crie a primeira (ex: Carreira, Saúde, Estudos) pra organizar
+              tarefas, projetos, hábitos e metas.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {areas.map((a) => (
+                <span
+                  key={a.id}
+                  className="flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-medium"
+                >
+                  <span
+                    className="size-2 rounded-full"
+                    style={{ backgroundColor: a.color ?? '#999' }}
+                  />
+                  {a.name}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
 
       <section className="flex flex-col gap-2">

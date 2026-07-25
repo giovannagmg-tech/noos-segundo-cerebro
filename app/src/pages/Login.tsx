@@ -5,7 +5,8 @@ import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
+import { Logo } from '@/components/Logo'
 
 type Status = 'idle' | 'sending' | 'sent' | 'error'
 type Mode = 'magic' | 'password'
@@ -70,10 +71,10 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-svh items-center justify-center bg-muted/30 p-6">
+    <div className="flex min-h-svh items-center justify-center bg-background p-6">
       <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-2xl">Noos</CardTitle>
+        <CardHeader className="items-center text-center">
+          <Logo size={40} className="mb-1" />
           <CardDescription>Seu segundo cérebro pessoal.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
