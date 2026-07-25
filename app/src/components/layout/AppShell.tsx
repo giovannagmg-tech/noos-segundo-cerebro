@@ -1,8 +1,8 @@
 import { NavLink, Outlet } from 'react-router-dom'
+import { LogOut } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -15,8 +15,10 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
+import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/use-auth'
+import { ThemeToggle } from './ThemeToggle'
 
 const fase1Nav = [
   { to: '/notes', label: 'Notas' },
@@ -56,23 +58,26 @@ export function AppShell() {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter>
-          <div className="flex flex-col gap-1 px-2 py-1 text-xs text-muted-foreground">
-            <span className="truncate">{session?.user.email}</span>
-            <button
-              className="text-left underline-offset-2 hover:underline"
-              onClick={() => supabase.auth.signOut()}
-            >
-              Sair
-            </button>
-          </div>
-        </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-14 items-center gap-2 border-b px-4">
-          <SidebarTrigger />
-          <Separator orientation="vertical" className="h-5" />
-          <span className="text-sm text-muted-foreground">Fase 1 — Conhecimento</span>
+        <header className="flex h-14 items-center justify-between gap-2 border-b px-4">
+          <div className="flex items-center gap-2">
+            <SidebarTrigger />
+            <Separator orientation="vertical" className="h-5" />
+            <span className="text-sm text-muted-foreground">Fase 1 — Conhecimento</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="truncate text-sm text-muted-foreground">{session?.user.email}</span>
+            <ThemeToggle />
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Sair"
+              onClick={() => supabase.auth.signOut()}
+            >
+              <LogOut className="size-4" />
+            </Button>
+          </div>
         </header>
         <main className="flex-1 overflow-auto p-6">
           <Outlet />
