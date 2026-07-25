@@ -28,6 +28,12 @@ const fase1Nav = [
   { to: '/capture', label: 'Captura rápida' },
 ]
 
+const fase2Nav = [
+  { to: '/tasks', label: 'Tarefas', end: true },
+  { to: '/tasks/eisenhower', label: 'Eisenhower' },
+  { to: '/projects', label: 'Projetos' },
+]
+
 export function AppShell() {
   const { session } = useAuth()
 
@@ -47,6 +53,26 @@ export function AppShell() {
                     <SidebarMenuButton asChild>
                       <NavLink
                         to={item.to}
+                        className={({ isActive }) => (isActive ? 'font-medium text-sidebar-primary' : '')}
+                      >
+                        {item.label}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+          <SidebarGroup>
+            <SidebarGroupLabel>Produtividade</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {fase2Nav.map((item) => (
+                  <SidebarMenuItem key={item.to}>
+                    <SidebarMenuButton asChild>
+                      <NavLink
+                        to={item.to}
+                        end={item.end}
                         className={({ isActive }) => (isActive ? 'font-medium text-sidebar-primary' : '')}
                       >
                         {item.label}

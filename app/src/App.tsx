@@ -10,6 +10,10 @@ import Graph from '@/pages/Graph'
 import Tags from '@/pages/Tags'
 import Pomodoro from '@/pages/Pomodoro'
 import Capture from '@/pages/Capture'
+import Tasks from '@/pages/Tasks'
+import TasksEisenhower from '@/pages/TasksEisenhower'
+import Projects from '@/pages/Projects'
+import ProjectDetail from '@/pages/ProjectDetail'
 
 function App() {
   return (
@@ -25,6 +29,10 @@ function App() {
               <Route path="/tags" element={<Tags />} />
               <Route path="/pomodoro" element={<Pomodoro />} />
               <Route path="/capture" element={<Capture />} />
+              <Route path="/tasks" element={<Tasks />} />
+              <Route path="/tasks/eisenhower" element={<TasksEisenhower />} />
+              <Route path="/projects" element={<Projects />} />
+              <Route path="/projects/:id" element={<ProjectDetail />} />
             </Route>
             <Route path="/" element={<Navigate to="/notes" replace />} />
             <Route path="*" element={<Navigate to="/notes" replace />} />
