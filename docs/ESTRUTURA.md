@@ -85,7 +85,7 @@ Propósito: sugestões automáticas de conexão entre notas geradas pela IA (ite
 Propósito: guarda o vetor de embedding de cada nota para busca semântica e sugestão de conexões (usa extensão `pgvector`).
 - `note_id` uuid PK FK → notes(id) ON DELETE CASCADE
 - `user_id` uuid NOT NULL FK → profiles(id)
-- `embedding` vector(1536)
+- `embedding` vector(768) — gemini-embedding-001 truncado (Matryoshka) de 3072 pra 768 dim
 - `updated_at` timestamptz NOT NULL default now()
 - Índices: índice `ivfflat`/`hnsw` em `embedding` (vector_cosine_ops); `idx_note_embeddings_user` (user_id).
 
@@ -297,7 +297,7 @@ Propósito: resumos e insights de progresso sobre metas e hábitos gerados pela 
 
 Todas chamadas **exclusivamente via Supabase Edge Functions** (chaves e tokens nunca ficam no frontend).
 
-- **API de IA — embeddings + sugestões (item B):** OpenAI (embeddings `text-embedding-3-small` → `vector(1536)`) para gerar `note_embeddings` e alimentar `suggest-note-connections`. Motivo: encontrar notas semanticamente próximas que você ainda não linkou, mesmo entre áreas distintas (marketing ↔ neurociência).
+- **API de IA — embeddings + sugestões (item B):** Gemini (`gemini-embedding-001`, truncado via Matryoshka pra `vector(768)`) para gerar `note_embeddings` e alimentar `suggest-note-connections`. Trocado de OpenAI pra Gemini a pedido do dono — tier gratuito de verdade (sem cartão de crédito) via chave do Google AI Studio, suficiente pro volume pessoal (centenas de notas). Motivo: encontrar notas semanticamente próximas que você ainda não linkou, mesmo entre áreas distintas (marketing ↔ neurociência).
 - **API de IA — resumos e insights (item C):** para `generate-progress-insights`, recomendo **Gemini 2.5 Pro** (contexto de até 1M tokens, custo baixo) por lidar bem com muito histórico de hábitos/metas de uma vez; alternativa **GPT 5.4** como default mainstream de ótimo custo/qualidade. Motivo: gerar resumos e direcionamento sobre seu progresso. Como o volume é pessoal (centenas de notas), o custo por uso é baixo.
 - **Google Calendar API (OAuth 2.0):** via `google-calendar-oauth` e `google-calendar-sync` para leitura e escrita bidirecional de eventos dentro do Noos. Motivo: você pediu explicitamente visualizar e editar seus compromissos dentro do app.
 - **Resend (email):** para `send-deadline-alert` (alertas de prazo de tarefas e metas). Motivo: notificar vencimentos. O free tier (100 emails/dia) cobre folgado o uso pessoal.
@@ -305,6 +305,6 @@ Todas chamadas **exclusivamente via Supabase Edge Functions** (chaves e tokens n
 ### Custo estimado (uso pessoal, centenas de notas)
 - **Lovable:** Free ou Pro R$95/mês quando precisar de mais projetos/deploy.
 - **Supabase:** Free cobre 500MB, 50K auth e 500K edge invocations — suficiente no início; migrar para Pro R$125/mês só quando o acervo/uso crescer.
-- **APIs de IA:** pague-por-uso, poucos dólares/mês nesse volume.
+- **APIs de IA:** embeddings no tier gratuito do Gemini (`gemini-embedding-001`, sem cartão de crédito); insights (Gemini 2.5 Pro) pague-por-uso, poucos dólares/mês nesse volume.
 - **Resend:** Free.
 - **Google Calendar API:** gratuita.

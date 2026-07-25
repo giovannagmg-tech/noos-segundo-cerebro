@@ -6,7 +6,7 @@ Este documento detalha **todas as functions/endpoints** do backend Supabase do N
 - **Usuário logado:** a Edge Function/RPC roda no contexto do JWT do Supabase Auth; RLS garante `user_id = auth.uid()`. É o padrão para tudo que o dono aciona pela UI.
 - **Service role:** funções que escrevem em tabelas restritas (`note_embeddings`, `link_suggestions`, `ai_insights`, `rewards`, `calendar_events`, `calendar_connections`) usam a `service_role key` internamente, mas **sempre validam o `user_id` do dono** antes de gravar.
 - **Cron:** funções disparadas por pg_cron rodam com privilégios elevados no banco e, quando chamam Edge Functions, usam a service role.
-- Chaves de APIs externas (OpenAI, Gemini, Google, Resend) **nunca ficam no frontend** — só nas Edge Functions (secrets do Supabase).
+- Chaves de APIs externas (Gemini, Google, Resend) **nunca ficam no frontend** — só nas Edge Functions (secrets do Supabase).
 
 ---
 
@@ -55,11 +55,11 @@ Este documento detalha **todas as functions/endpoints** do backend Supabase do N
   ```
 - **Output:**
   ```json
-  { "note_id": "uuid", "status": "embedded", "dimensions": 1536 }
+  { "note_id": "uuid", "status": "embedded", "dimensions": 768 }
   ```
 - **Regras de negócio/validações:**
   - Carrega `title || content` da nota, valida que a nota pertence ao `user_id` esperado.
-  - Chama **OpenAI `text-embedding-3-small`** → `vector(1536)`.
+  - Chama **Gemini `gemini-embedding-001`** (`taskType: SEMANTIC_SIMILARITY`, `outputDimensionality: 768`) → `vector(768)`. Truncar abaixo dos 3072 nativos exige renormalizar o vetor manualmente (norma L2) antes de gravar — a API só garante norma 1 na dimensão nativa.
   - Faz UPSERT em `note_embeddings` (PK `note_id`), atualizando `updated_at` e preenchendo `user_id`.
   - Escreve via **service role** (tabela `note_embeddings` só aceita INSERT/UPDATE por service role), mas preserva o `user_id` real da nota.
   - Idempotente: reprocessar a mesma nota apenas sobrescreve o vetor. Suporta modo **backfill** (lote de `note_id`s).

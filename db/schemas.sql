@@ -269,7 +269,7 @@ create policy "link_suggestions_update_own" on public.link_suggestions
 create table public.note_embeddings (
   note_id uuid primary key references public.notes(id) on delete cascade,
   user_id uuid not null references public.profiles(id) on delete cascade,
-  embedding vector(1536),
+  embedding vector(768), -- gemini-embedding-001 truncado (Matryoshka) de 3072 pra 768 dim
   updated_at timestamptz not null default now()
 );
 

@@ -53,7 +53,7 @@ Rastreia: RF-08
 **RS-09:** A página `/capture` deve criar nota com `is_quick_capture = true` e `source = 'mobile_capture'`; a inbox em `/notes` deve listar por `idx_notes_quick_capture` apenas notas pendentes de organização.
 Rastreia: RF-09
 
-**RS-10:** A Edge Function `generate-note-embedding` deve gerar embedding via OpenAI `text-embedding-3-small` (dimensão 1536) e fazer upsert em `note_embeddings` usando service role; deve ser disparada após criar/editar nota e em backfill.
+**RS-10:** A Edge Function `generate-note-embedding` deve gerar embedding via Gemini `gemini-embedding-001` (`outputDimensionality: 768`, renormalizado por norma L2 após o truncamento) e fazer upsert em `note_embeddings` usando service role; deve ser disparada após criar/editar nota e em backfill.
 Rastreia: RF-07, RF-10
 
 **RS-11:** A Edge Function `suggest-note-connections` deve, para uma nota, buscar vizinhos por similaridade cosseno em `note_embeddings` (mesmo `user_id`), gravar `link_suggestions` com `status = 'pending'`, `reason` e `score`, ignorando pares que já possuam `note_link`; o aceite pelo dono deve criar `note_link` com `origin = 'ai_suggested'`.
@@ -129,7 +129,7 @@ O Noos é uma aplicação web (com telas mobile-first para captura) sobre backen
                 │                            │
         ┌───────┴───────┐            ┌───────┴───────────────┐
         │ APIs de IA    │            │ Google Calendar API    │
-        │ OpenAI (emb)  │            │ (OAuth 2.0, sync)      │
+        │ Gemini (emb)  │            │ (OAuth 2.0, sync)      │
         │ Gemini 2.5    │            ├────────────────────────┤
         │ Pro (insights)│            │ Resend (email alertas) │
         └───────────────┘            └────────────────────────┘
@@ -140,19 +140,19 @@ Fluxos-chave: (1) importar/editar nota → embedding → sugestão de conexões 
 ## 3. Stack tecnológica
 
 **Backend — Supabase (não negociável):**
-- **PostgreSQL** com RLS, extensão **pgvector** (embeddings 1536) e índices GIN full-text.
+- **PostgreSQL** com RLS, extensão **pgvector** (embeddings 768, gemini-embedding-001 truncado) e índices GIN full-text.
 - **Auth**: magic link (ideal para dono único), email+senha e Google OAuth (também exigido para o Google Calendar).
 - **Storage**: avatares e eventuais anexos de notas.
-- **Edge Functions (Deno)**: toda integração externa (OpenAI, Gemini, Google Calendar, Resend) e lógica sensível.
+- **Edge Functions (Deno)**: toda integração externa (Gemini, Google Calendar, Resend) e lógica sensível.
 - **Realtime**: refresh do grafo, inbox de capturas e dashboards.
 - **Cron (pg_cron)**: alertas de prazo, sugestões diárias, insights semanais e sync do calendário.
 
 **Frontend — React + Tailwind + shadcn/ui:**
 O caminho de build recomendado no dossiê original é o **Lovable**, porque você se descreve como usuário único sem time de TI ou capacidade de codar — o Lovable leva o Noos do zero ao ar pelo caminho mais rápido, com integração nativa ao Supabase e deploy com preview. Neste repositório específico, a mesma stack de frontend (React + Tailwind + shadcn/ui) é escrita via Claude Code em vez de gerada pela UI do Lovable — as convenções de nomenclatura, schema e Edge Functions permanecem idênticas. Recursos sofisticados — **grafo visual estilo Capacities/Obsidian, Pomodoro e IA de sugestões** — são plenamente construíveis nesse caminho, porque toda a lógica pesada (embeddings, sugestões, OAuth, sync) fica isolada em Edge Functions. As telas mobile-first (`/capture`) atendem seu uso de "captura rápida no celular, organização na web".
 
-**Integrações:** OpenAI (embeddings), Gemini 2.5 Pro (insights de progresso, contexto longo e custo baixo), Google Calendar API e Resend — todas via Edge Functions.
+**Integrações:** Gemini (`gemini-embedding-001`, tier gratuito) para embeddings, Gemini 2.5 Pro (insights de progresso, contexto longo e custo baixo), Google Calendar API e Resend — todas via Edge Functions.
 
-**Custo pessoal estimado:** Lovable Free/Pro (R$95/mês, se optar por usar a plataforma), Supabase Free no início (Pro R$125/mês quando o acervo crescer), APIs de IA em pague-por-uso (poucos dólares/mês para centenas de notas), Resend Free (100 emails/dia), Google Calendar API gratuita.
+**Custo pessoal estimado:** Lovable Free/Pro (R$95/mês, se optar por usar a plataforma), Supabase Free no início (Pro R$125/mês quando o acervo crescer), embeddings no tier gratuito do Gemini (sem cartão de crédito), insights (Gemini 2.5 Pro) pague-por-uso (poucos dólares/mês para centenas de notas), Resend Free (100 emails/dia), Google Calendar API gratuita.
 
 ## 4. Segurança
 
@@ -165,7 +165,7 @@ O caminho de build recomendado no dossiê original é o **Lovable**, porque voc�
 
 **Autenticação:** Supabase Auth com magic link, email+senha e Google OAuth. O trigger `handle_new_user` provisiona `profiles` a cada novo usuário, já preparando o modo SaaS.
 
-**Segredos e API keys:** chaves da OpenAI, Gemini, Google OAuth (client secret) e Resend ficam **exclusivamente em variáveis de ambiente das Edge Functions** (Supabase secrets), nunca no código do frontend nem versionadas. Tokens do Google Calendar (`access_token`/`refresh_token`) são gravados só via service role e nunca trafegam para o cliente.
+**Segredos e API keys:** chaves da Gemini, Google OAuth (client secret) e Resend ficam **exclusivamente em variáveis de ambiente das Edge Functions** (Supabase secrets), nunca no código do frontend nem versionadas. Tokens do Google Calendar (`access_token`/`refresh_token`) são gravados só via service role e nunca trafegam para o cliente.
 
 **LGPD / dados sensíveis:** o acervo do Noos é conhecimento pessoal e privado; RLS garante que ninguém além do dono acesse. Como titular único você tem direito de exportar (o próprio conteúdo já vem do Notion/Obsidian) e excluir dados — a exclusão de nota cascateia links, tags, referências e embeddings. Se/quando virar SaaS, deve-se adicionar política de retenção, consentimento e rota de exportação/eliminação por assinante. Comunicação com APIs de IA e Google trafega sobre HTTPS/TLS.
 

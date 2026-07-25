@@ -1,14 +1,14 @@
 // Edge Function: generate-note-embedding
-// docs/FUNCTIONS.md — gera o embedding (OpenAI text-embedding-3-small,
-// 1536 dim) do título+conteúdo de uma nota e grava em note_embeddings.
-// note_embeddings só aceita INSERT/UPDATE via service role (RLS só libera
-// SELECT ao dono) — por isso dois clientes: um escopado ao usuário pra
-// validar que a nota é dele, outro service role só pro upsert final.
+// docs/FUNCTIONS.md — gera o embedding (Gemini gemini-embedding-001,
+// truncado pra 768 dim) do título+conteúdo de uma nota e grava em
+// note_embeddings. note_embeddings só aceita INSERT/UPDATE via service role
+// (RLS só libera SELECT ao dono) — por isso dois clientes: um escopado ao
+// usuário pra validar que a nota é dele, outro service role só pro upsert.
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
 
-const EMBEDDING_MODEL = 'text-embedding-3-small'
-const EMBEDDING_DIMENSIONS = 1536
+const EMBEDDING_MODEL = 'gemini-embedding-001'
+const EMBEDDING_DIMENSIONS = 768
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -16,10 +16,10 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) return jsonResponse({ error: 'Não autenticado' }, 401)
 
-  const openaiKey = Deno.env.get('OPENAI_API_KEY')
-  if (!openaiKey) {
+  const geminiKey = Deno.env.get('GEMINI_API_KEY')
+  if (!geminiKey) {
     return jsonResponse(
-      { error: 'OPENAI_API_KEY não configurada nos secrets do Supabase' },
+      { error: 'GEMINI_API_KEY não configurada nos secrets do Supabase' },
       500,
     )
   }
@@ -56,26 +56,43 @@ Deno.serve(async (req) => {
   const text = `${note.title}\n\n${note.content ?? ''}`.trim().slice(0, 8000)
   if (!text) return jsonResponse({ error: 'Nota sem conteúdo pra gerar embedding' }, 400)
 
-  const openaiRes = await fetch('https://api.openai.com/v1/embeddings', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${openaiKey}`,
-      'Content-Type': 'application/json',
+  const geminiRes = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${EMBEDDING_MODEL}:embedContent`,
+    {
+      method: 'POST',
+      headers: {
+        'x-goog-api-key': geminiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        content: { parts: [{ text }] },
+        embedContentConfig: {
+          taskType: 'SEMANTIC_SIMILARITY',
+          outputDimensionality: EMBEDDING_DIMENSIONS,
+        },
+      }),
     },
-    body: JSON.stringify({ model: EMBEDDING_MODEL, input: text }),
-  })
+  )
 
-  if (!openaiRes.ok) {
-    const detail = await openaiRes.text()
-    console.error('OpenAI embeddings error:', detail)
+  if (!geminiRes.ok) {
+    const detail = await geminiRes.text()
+    console.error('Gemini embeddings error:', detail)
     return jsonResponse({ error: 'Falha ao gerar embedding' }, 502)
   }
 
-  const openaiJson = await openaiRes.json()
-  const embedding: number[] = openaiJson.data?.[0]?.embedding
-  if (!Array.isArray(embedding)) {
+  const geminiJson = await geminiRes.json()
+  const rawValues: number[] | undefined = geminiJson.embedding?.values
+  if (!Array.isArray(rawValues) || rawValues.length !== EMBEDDING_DIMENSIONS) {
+    console.error('Resposta inesperada da Gemini:', geminiJson)
     return jsonResponse({ error: 'Resposta inesperada da API de embeddings' }, 502)
   }
+
+  // gemini-embedding-001 só vem normalizado (norma L2 = 1) na dimensão nativa
+  // (3072). Truncando pra 768 via outputDimensionality, a normalização deixa
+  // de ser garantida — refazemos manualmente, senão a similaridade de
+  // cosseno da RPC match_note_embeddings fica distorcida.
+  const norm = Math.sqrt(rawValues.reduce((sum, v) => sum + v * v, 0))
+  const embedding = norm > 0 ? rawValues.map((v) => v / norm) : rawValues
 
   const serviceClient = createClient(supabaseUrl, serviceRoleKey)
   const { error: upsertError } = await serviceClient

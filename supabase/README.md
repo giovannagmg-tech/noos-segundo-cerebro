@@ -15,6 +15,9 @@ Projeto Supabase local (`npx supabase init`). O schema vive em `db/schemas.sql`
 4. `20260727000000_knowledge_graph_rpc.sql` — RPC `get_knowledge_graph`.
 5. `20260728000000_match_note_embeddings_rpc.sql` — RPC auxiliar de
    similaridade vetorial, usada por `suggest-note-connections`.
+6. `20260729000000_gemini_embeddings_768.sql` — troca `note_embeddings.embedding`
+   de `vector(1536)` (OpenAI) pra `vector(768)` (Gemini `gemini-embedding-001`
+   truncado via Matryoshka — ver seção "Edge Functions" abaixo).
 
 ## Aplicar uma migration nova
 
@@ -39,20 +42,24 @@ Três funções em `functions/`, todas em Deno/TypeScript:
 - **`import-note`** — importação incremental (Notion/Obsidian): cria a nota,
   extrai `[[wikilinks]]` do conteúdo virando `note_links`, aplica tags e
   referências externas, e dispara `generate-note-embedding`.
-- **`generate-note-embedding`** — gera o embedding (OpenAI
-  `text-embedding-3-small`) do título+conteúdo e grava em `note_embeddings`
-  (via service role — RLS dessa tabela só libera SELECT ao dono).
+- **`generate-note-embedding`** — gera o embedding (Gemini
+  `gemini-embedding-001`, truncado pra 768 dim + renormalizado por norma L2)
+  do título+conteúdo e grava em `note_embeddings` (via service role — RLS
+  dessa tabela só libera SELECT ao dono).
 - **`suggest-note-connections`** — usa a RPC `match_note_embeddings` pra achar
   vizinhos semânticos e grava `link_suggestions` pendentes (ignora pares já
   linkados ou já sugeridos).
 
 ### O que só você consegue fazer
 
-**1. Configurar a chave da OpenAI como secret** (nunca no código/frontend):
+**1. Configurar a chave do Gemini como secret** (nunca no código/frontend):
 ```bash
-npx supabase secrets set OPENAI_API_KEY=sk-...
+npx supabase secrets set GEMINI_API_KEY=sua-chave-aqui
 ```
-Pegue a chave em [platform.openai.com/api-keys](https://platform.openai.com/api-keys).
+Pegue a chave grátis em [aistudio.google.com/apikey](https://aistudio.google.com/apikey) —
+tier gratuito de `gemini-embedding-001`, sem cartão de crédito, suficiente
+pro volume pessoal (centenas de notas). Limite: 5–15 requisições/min e até
+1.000/dia no tier free — dá folga pro uso descrito no PRD.
 
 **2. Deployar as três funções** (exige `login`/`link` já feitos, acima):
 ```bash
