@@ -1,18 +1,16 @@
 // Edge Function: generate-progress-insights
 // docs/FUNCTIONS.md — analisa goals, habit_logs e tasks do período e grava
-// um resumo em ai_insights via Gemini 2.5 Pro. Roda sob demanda (chamada
-// pela página /insights) — o cron semanal (cron_weekly_insights) fica pra
-// Fase 3.
+// um resumo em ai_insights via Gemini 2.5 Pro. Chamada sob demanda (página
+// /insights, usuário logado) ou por cron_weekly_insights (service role,
+// user_id no body).
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
+import { resolveAuth } from '../_shared/auth.ts'
 
 type InsightType = 'goal_progress' | 'habit_summary' | 'weekly_review'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
-
-  const authHeader = req.headers.get('Authorization')
-  if (!authHeader) return jsonResponse({ error: 'Não autenticado' }, 401)
 
   const geminiKey = Deno.env.get('GEMINI_API_KEY')
   if (!geminiKey) {
@@ -23,42 +21,52 @@ Deno.serve(async (req) => {
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-  const supabase = createClient(supabaseUrl, anonKey, {
-    global: { headers: { Authorization: authHeader } },
-  })
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser()
-  if (userError || !user) return jsonResponse({ error: 'Não autenticado' }, 401)
-
-  let body: { period_start?: string; period_end?: string; insight_type?: InsightType }
+  let body: {
+    user_id?: string
+    period_start?: string
+    period_end?: string
+    insight_type?: InsightType
+  }
   try {
     body = await req.json()
   } catch {
     body = {}
   }
+
+  const auth = await resolveAuth(req, { supabaseUrl, anonKey, serviceRoleKey, body })
+  if (!auth) return jsonResponse({ error: 'Não autenticado' }, 401)
+
   const insightType: InsightType = body.insight_type ?? 'weekly_review'
   const periodEnd = body.period_end ?? new Date().toISOString().slice(0, 10)
   const periodStart =
     body.period_start ?? new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString().slice(0, 10)
 
+  const serviceClient = createClient(supabaseUrl, serviceRoleKey)
+
   const [{ data: goals }, { data: habitLogs }, { data: habits }, { data: tasks }] = await Promise.all([
-    supabase.from('goals').select('title, category, current_value, target_value, unit, status'),
-    supabase
+    serviceClient
+      .from('goals')
+      .select('title, category, current_value, target_value, unit, status')
+      .eq('user_id', auth.userId),
+    serviceClient
       .from('habit_logs')
       .select('habit_id, log_date, completed')
+      .eq('user_id', auth.userId)
       .gte('log_date', periodStart)
       .lte('log_date', periodEnd),
-    supabase.from('habits').select('id, name, current_streak, best_streak').eq('is_active', true),
-    supabase
+    serviceClient
+      .from('habits')
+      .select('id, name, current_streak, best_streak')
+      .eq('user_id', auth.userId)
+      .eq('is_active', true),
+    serviceClient
       .from('tasks')
       .select('title, status, due_date, eisenhower_quadrant')
+      .eq('user_id', auth.userId)
       .gte('due_date', periodStart)
       .lte('due_date', periodEnd),
   ])
 
-  const habitById = new Map((habits ?? []).map((h) => [h.id, h]))
   const completions = (habitLogs ?? []).filter((l) => l.completed).length
   const habitSummary = (habits ?? [])
     .map((h) => `- ${h.name}: sequência atual ${h.current_streak} dias (recorde ${h.best_streak})`)
@@ -111,11 +119,10 @@ ${taskSummary || '(nenhuma tarefa com prazo neste período)'}`
     return jsonResponse({ error: 'Resposta inesperada da IA' }, 502)
   }
 
-  const serviceClient = createClient(supabaseUrl, serviceRoleKey)
   const { data: insight, error: insertError } = await serviceClient
     .from('ai_insights')
     .insert({
-      user_id: user.id,
+      user_id: auth.userId,
       insight_type: insightType,
       content: content.trim(),
       period_start: periodStart,

@@ -63,9 +63,9 @@ create trigger trg_profiles_updated_at
 alter table public.profiles enable row level security;
 
 create policy "profiles_select_own" on public.profiles
-  for select using (id = auth.uid());
+  for select to authenticated using (id = auth.uid());
 create policy "profiles_update_own" on public.profiles
-  for update using (id = auth.uid()) with check (id = auth.uid());
+  for update to authenticated using (id = auth.uid()) with check (id = auth.uid());
 
 -- Trigger de criação de profile (após tabela existir)
 create trigger on_auth_user_created
@@ -99,13 +99,13 @@ create trigger trg_notes_updated_at
 alter table public.notes enable row level security;
 
 create policy "notes_select_own" on public.notes
-  for select using (user_id = auth.uid());
+  for select to authenticated using (user_id = auth.uid());
 create policy "notes_insert_own" on public.notes
-  for insert with check (user_id = auth.uid());
+  for insert to authenticated with check (user_id = auth.uid());
 create policy "notes_update_own" on public.notes
-  for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+  for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "notes_delete_own" on public.notes
-  for delete using (user_id = auth.uid());
+  for delete to authenticated using (user_id = auth.uid());
 
 -- ---------------------------------------------------------------------
 -- tags
@@ -129,13 +129,13 @@ create trigger trg_tags_updated_at
 alter table public.tags enable row level security;
 
 create policy "tags_select_own" on public.tags
-  for select using (user_id = auth.uid());
+  for select to authenticated using (user_id = auth.uid());
 create policy "tags_insert_own" on public.tags
-  for insert with check (user_id = auth.uid());
+  for insert to authenticated with check (user_id = auth.uid());
 create policy "tags_update_own" on public.tags
-  for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+  for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "tags_delete_own" on public.tags
-  for delete using (user_id = auth.uid());
+  for delete to authenticated using (user_id = auth.uid());
 
 -- ---------------------------------------------------------------------
 -- note_tags (N:N notes x tags)
@@ -160,13 +160,13 @@ create trigger trg_note_tags_updated_at
 alter table public.note_tags enable row level security;
 
 create policy "note_tags_select_own" on public.note_tags
-  for select using (user_id = auth.uid());
+  for select to authenticated using (user_id = auth.uid());
 create policy "note_tags_insert_own" on public.note_tags
-  for insert with check (user_id = auth.uid());
+  for insert to authenticated with check (user_id = auth.uid());
 create policy "note_tags_update_own" on public.note_tags
-  for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+  for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "note_tags_delete_own" on public.note_tags
-  for delete using (user_id = auth.uid());
+  for delete to authenticated using (user_id = auth.uid());
 
 -- ---------------------------------------------------------------------
 -- note_links (arestas do grafo)
@@ -193,13 +193,13 @@ create trigger trg_note_links_updated_at
 alter table public.note_links enable row level security;
 
 create policy "note_links_select_own" on public.note_links
-  for select using (user_id = auth.uid());
+  for select to authenticated using (user_id = auth.uid());
 create policy "note_links_insert_own" on public.note_links
-  for insert with check (user_id = auth.uid());
+  for insert to authenticated with check (user_id = auth.uid());
 create policy "note_links_update_own" on public.note_links
-  for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+  for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "note_links_delete_own" on public.note_links
-  for delete using (user_id = auth.uid());
+  for delete to authenticated using (user_id = auth.uid());
 
 -- ---------------------------------------------------------------------
 -- external_references
@@ -225,13 +225,13 @@ create trigger trg_external_references_updated_at
 alter table public.external_references enable row level security;
 
 create policy "external_references_select_own" on public.external_references
-  for select using (user_id = auth.uid());
+  for select to authenticated using (user_id = auth.uid());
 create policy "external_references_insert_own" on public.external_references
-  for insert with check (user_id = auth.uid());
+  for insert to authenticated with check (user_id = auth.uid());
 create policy "external_references_update_own" on public.external_references
-  for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+  for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "external_references_delete_own" on public.external_references
-  for delete using (user_id = auth.uid());
+  for delete to authenticated using (user_id = auth.uid());
 
 -- ---------------------------------------------------------------------
 -- link_suggestions (IA — item B) | escrita via service role
@@ -259,9 +259,9 @@ alter table public.link_suggestions enable row level security;
 
 -- SELECT e UPDATE (aceitar/dispensar) pelo dono; INSERT/DELETE ficam a cargo do service role
 create policy "link_suggestions_select_own" on public.link_suggestions
-  for select using (user_id = auth.uid());
+  for select to authenticated using (user_id = auth.uid());
 create policy "link_suggestions_update_own" on public.link_suggestions
-  for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+  for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 -- ---------------------------------------------------------------------
 -- note_embeddings (pgvector) | escrita via service role
@@ -285,7 +285,7 @@ alter table public.note_embeddings enable row level security;
 
 -- Somente SELECT ao dono; INSERT/UPDATE via service role (Edge Functions de IA)
 create policy "note_embeddings_select_own" on public.note_embeddings
-  for select using (user_id = auth.uid());
+  for select to authenticated using (user_id = auth.uid());
 
 -- ---------------------------------------------------------------------
 -- pomodoro_sessions
@@ -313,13 +313,13 @@ create trigger trg_pomodoro_sessions_updated_at
 alter table public.pomodoro_sessions enable row level security;
 
 create policy "pomodoro_sessions_select_own" on public.pomodoro_sessions
-  for select using (user_id = auth.uid());
+  for select to authenticated using (user_id = auth.uid());
 create policy "pomodoro_sessions_insert_own" on public.pomodoro_sessions
-  for insert with check (user_id = auth.uid());
+  for insert to authenticated with check (user_id = auth.uid());
 create policy "pomodoro_sessions_update_own" on public.pomodoro_sessions
-  for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+  for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "pomodoro_sessions_delete_own" on public.pomodoro_sessions
-  for delete using (user_id = auth.uid());
+  for delete to authenticated using (user_id = auth.uid());
 
 -- =====================================================================
 -- FASE 2 — PRODUTIVIDADE E VIDA
@@ -347,13 +347,13 @@ create trigger trg_life_areas_updated_at
 alter table public.life_areas enable row level security;
 
 create policy "life_areas_select_own" on public.life_areas
-  for select using (user_id = auth.uid());
+  for select to authenticated using (user_id = auth.uid());
 create policy "life_areas_insert_own" on public.life_areas
-  for insert with check (user_id = auth.uid());
+  for insert to authenticated with check (user_id = auth.uid());
 create policy "life_areas_update_own" on public.life_areas
-  for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+  for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "life_areas_delete_own" on public.life_areas
-  for delete using (user_id = auth.uid());
+  for delete to authenticated using (user_id = auth.uid());
 
 -- ---------------------------------------------------------------------
 -- projects
@@ -379,13 +379,13 @@ create trigger trg_projects_updated_at
 alter table public.projects enable row level security;
 
 create policy "projects_select_own" on public.projects
-  for select using (user_id = auth.uid());
+  for select to authenticated using (user_id = auth.uid());
 create policy "projects_insert_own" on public.projects
-  for insert with check (user_id = auth.uid());
+  for insert to authenticated with check (user_id = auth.uid());
 create policy "projects_update_own" on public.projects
-  for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+  for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "projects_delete_own" on public.projects
-  for delete using (user_id = auth.uid());
+  for delete to authenticated using (user_id = auth.uid());
 
 -- ---------------------------------------------------------------------
 -- tasks
@@ -420,13 +420,13 @@ create trigger trg_tasks_updated_at
 alter table public.tasks enable row level security;
 
 create policy "tasks_select_own" on public.tasks
-  for select using (user_id = auth.uid());
+  for select to authenticated using (user_id = auth.uid());
 create policy "tasks_insert_own" on public.tasks
-  for insert with check (user_id = auth.uid());
+  for insert to authenticated with check (user_id = auth.uid());
 create policy "tasks_update_own" on public.tasks
-  for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+  for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "tasks_delete_own" on public.tasks
-  for delete using (user_id = auth.uid());
+  for delete to authenticated using (user_id = auth.uid());
 
 -- ---------------------------------------------------------------------
 -- habits
@@ -456,13 +456,13 @@ create trigger trg_habits_updated_at
 alter table public.habits enable row level security;
 
 create policy "habits_select_own" on public.habits
-  for select using (user_id = auth.uid());
+  for select to authenticated using (user_id = auth.uid());
 create policy "habits_insert_own" on public.habits
-  for insert with check (user_id = auth.uid());
+  for insert to authenticated with check (user_id = auth.uid());
 create policy "habits_update_own" on public.habits
-  for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+  for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "habits_delete_own" on public.habits
-  for delete using (user_id = auth.uid());
+  for delete to authenticated using (user_id = auth.uid());
 
 -- ---------------------------------------------------------------------
 -- habit_logs
@@ -488,13 +488,13 @@ create trigger trg_habit_logs_updated_at
 alter table public.habit_logs enable row level security;
 
 create policy "habit_logs_select_own" on public.habit_logs
-  for select using (user_id = auth.uid());
+  for select to authenticated using (user_id = auth.uid());
 create policy "habit_logs_insert_own" on public.habit_logs
-  for insert with check (user_id = auth.uid());
+  for insert to authenticated with check (user_id = auth.uid());
 create policy "habit_logs_update_own" on public.habit_logs
-  for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+  for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "habit_logs_delete_own" on public.habit_logs
-  for delete using (user_id = auth.uid());
+  for delete to authenticated using (user_id = auth.uid());
 
 -- ---------------------------------------------------------------------
 -- goals
@@ -526,13 +526,13 @@ create trigger trg_goals_updated_at
 alter table public.goals enable row level security;
 
 create policy "goals_select_own" on public.goals
-  for select using (user_id = auth.uid());
+  for select to authenticated using (user_id = auth.uid());
 create policy "goals_insert_own" on public.goals
-  for insert with check (user_id = auth.uid());
+  for insert to authenticated with check (user_id = auth.uid());
 create policy "goals_update_own" on public.goals
-  for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+  for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "goals_delete_own" on public.goals
-  for delete using (user_id = auth.uid());
+  for delete to authenticated using (user_id = auth.uid());
 
 -- ---------------------------------------------------------------------
 -- rewards | escrita via service role (concessão automática)
@@ -560,7 +560,7 @@ alter table public.rewards enable row level security;
 
 -- Somente SELECT ao dono; INSERT via service role (award-reward)
 create policy "rewards_select_own" on public.rewards
-  for select using (user_id = auth.uid());
+  for select to authenticated using (user_id = auth.uid());
 
 -- ---------------------------------------------------------------------
 -- calendar_connections | tokens só via service role
@@ -588,7 +588,7 @@ alter table public.calendar_connections enable row level security;
 
 -- Somente SELECT ao dono; INSERT/UPDATE/DELETE de tokens via service role (OAuth)
 create policy "calendar_connections_select_own" on public.calendar_connections
-  for select using (user_id = auth.uid());
+  for select to authenticated using (user_id = auth.uid());
 
 -- ---------------------------------------------------------------------
 -- calendar_events (cache local do Google Calendar)
@@ -616,13 +616,13 @@ alter table public.calendar_events enable row level security;
 
 -- Dono lê e edita (edições locais viram pending_push); sync via service role também escreve
 create policy "calendar_events_select_own" on public.calendar_events
-  for select using (user_id = auth.uid());
+  for select to authenticated using (user_id = auth.uid());
 create policy "calendar_events_insert_own" on public.calendar_events
-  for insert with check (user_id = auth.uid());
+  for insert to authenticated with check (user_id = auth.uid());
 create policy "calendar_events_update_own" on public.calendar_events
-  for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+  for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "calendar_events_delete_own" on public.calendar_events
-  for delete using (user_id = auth.uid());
+  for delete to authenticated using (user_id = auth.uid());
 
 -- ---------------------------------------------------------------------
 -- ai_insights (IA — item C) | escrita via service role/cron
@@ -648,6 +648,6 @@ alter table public.ai_insights enable row level security;
 
 -- Somente SELECT ao dono; INSERT via service role (generate-progress-insights)
 create policy "ai_insights_select_own" on public.ai_insights
-  for select using (user_id = auth.uid());
+  for select to authenticated using (user_id = auth.uid());
 create policy "ai_insights_delete_own" on public.ai_insights
-  for delete using (user_id = auth.uid());
+  for delete to authenticated using (user_id = auth.uid());

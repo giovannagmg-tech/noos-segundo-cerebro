@@ -1,10 +1,11 @@
 // Edge Function: google-calendar-sync
 // docs/FUNCTIONS.md — pull (Google → calendar_events) e push (edições locais
 // pending_push/local_only → Google), renovando o access_token via
-// refresh_token quando expirado. Nesta versão só roda sob demanda pelo
-// próprio dono (sem cron_calendar_sync ainda — fica pra Fase 3).
+// refresh_token quando expirado. Chamada sob demanda pelo próprio dono ou por
+// cron_calendar_sync (service role, user_id no body, uma vez por conexão).
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
+import { resolveAuth } from '../_shared/auth.ts'
 
 type CalendarConnection = {
   access_token: string
@@ -25,38 +26,31 @@ type CalendarEventRow = {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
-  const authHeader = req.headers.get('Authorization')
-  if (!authHeader) return jsonResponse({ error: 'Não autenticado' }, 401)
-
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const clientId = Deno.env.get('GOOGLE_CLIENT_ID')
   const clientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET')
 
-  const supabase = createClient(supabaseUrl, anonKey, {
-    global: { headers: { Authorization: authHeader } },
-  })
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser()
-  if (userError || !user) return jsonResponse({ error: 'Não autenticado' }, 401)
-
-  let body: { direction?: 'both' | 'pull' | 'push' }
+  let body: { user_id?: string; direction?: 'both' | 'pull' | 'push' }
   try {
     body = await req.json()
   } catch {
     body = {}
   }
+
+  const auth = await resolveAuth(req, { supabaseUrl, anonKey, serviceRoleKey, body })
+  if (!auth) return jsonResponse({ error: 'Não autenticado' }, 401)
+
   const direction = body.direction ?? 'both'
+  const userId = auth.userId
 
   const serviceClient = createClient(supabaseUrl, serviceRoleKey)
 
   const { data: conn } = await serviceClient
     .from('calendar_connections')
     .select('access_token, refresh_token, token_expires_at, calendar_id')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .eq('provider', 'google')
     .maybeSingle<CalendarConnection>()
 
@@ -96,7 +90,7 @@ Deno.serve(async (req) => {
         access_token: accessToken,
         token_expires_at: new Date(Date.now() + refreshJson.expires_in * 1000).toISOString(),
       })
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('provider', 'google')
   }
 
@@ -123,7 +117,7 @@ Deno.serve(async (req) => {
         const endsAt = item.end?.dateTime ?? item.end?.date ?? null
         const { error } = await serviceClient.from('calendar_events').upsert(
           {
-            user_id: user.id,
+            user_id: userId,
             google_event_id: item.id,
             title: item.summary ?? '(sem título)',
             starts_at: new Date(startsAt).toISOString(),
@@ -143,7 +137,7 @@ Deno.serve(async (req) => {
     const { data: pendingEvents } = await serviceClient
       .from('calendar_events')
       .select('id, google_event_id, title, starts_at, ends_at, sync_status')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .in('sync_status', ['pending_push', 'local_only'])
       .returns<CalendarEventRow[]>()
 
