@@ -94,14 +94,16 @@ export function AppShell() {
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-14 items-center justify-between gap-2 border-b px-4">
+        <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b px-3 sm:px-4">
           <div className="flex items-center gap-2">
             <SidebarTrigger />
             <Separator orientation="vertical" className="h-5" />
-            <span className="text-sm text-muted-foreground">Fase 1 — Conhecimento</span>
+            <span className="text-sm font-semibold tracking-tight sm:hidden">noos</span>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="truncate text-sm text-muted-foreground">{session?.user.email}</span>
+          <div className="flex items-center gap-1 sm:gap-3">
+            <span className="hidden max-w-40 truncate text-sm text-muted-foreground sm:inline">
+              {session?.user.email}
+            </span>
             <ThemeToggle />
             <Button
               variant="ghost"
@@ -113,7 +115,7 @@ export function AppShell() {
             </Button>
           </div>
         </header>
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-4 sm:p-6">
           <Outlet />
         </main>
       </SidebarInset>

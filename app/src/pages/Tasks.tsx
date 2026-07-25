@@ -162,7 +162,9 @@ export default function Tasks() {
         </div>
       ) : tasks.length === 0 ? (
         <p className="py-16 text-center text-sm text-muted-foreground">
-          Nenhuma tarefa ainda — crie sua primeira tarefa e organize por área.
+          {areaFilter === 'all' && projectFilter === 'all'
+            ? 'Nenhuma tarefa ainda — crie sua primeira tarefa e organize por área.'
+            : 'Nenhuma tarefa nesta área/projeto.'}
         </p>
       ) : view === 'lista' ? (
         <ListView tasks={tasks} onToggleDone={toggleDone} onOpen={openEditTask} />

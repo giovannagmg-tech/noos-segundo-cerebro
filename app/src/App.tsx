@@ -30,13 +30,15 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
+            {/* /capture faz seu próprio check de sessão e fica fora do AppShell
+                de propósito — captura rápida mobile-first não leva sidebar. */}
+            <Route path="/capture" element={<Capture />} />
             <Route element={<ProtectedRoute />}>
               <Route path="/notes" element={<Notes />} />
               <Route path="/notes/:id" element={<NoteDetail />} />
               <Route path="/graph" element={<Graph />} />
               <Route path="/tags" element={<Tags />} />
               <Route path="/pomodoro" element={<Pomodoro />} />
-              <Route path="/capture" element={<Capture />} />
               <Route path="/tasks" element={<Tasks />} />
               <Route path="/tasks/eisenhower" element={<TasksEisenhower />} />
               <Route path="/projects" element={<Projects />} />
