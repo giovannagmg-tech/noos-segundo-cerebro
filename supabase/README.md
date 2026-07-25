@@ -1,65 +1,75 @@
-# Noos — banco de dados (Fase 1, passo 1)
+# Noos — banco de dados e Edge Functions
 
-Este diretório é o projeto Supabase local, criado com `npx supabase init`. A
-migration em `migrations/20260709000000_initial_schema.sql` implementa o
-modelo de dados completo do plano de arquitetura (Noos v0.3): `area`,
-`type`, `note`, `link`, `tag`, `note_tag`, `collection`, `collection_note`,
-`daily_note`, `list`, `task`, `task_note`, `habit`, `habit_log`, `language`,
-`vocab_entry` — todas com `user_id` e Row Level Security desde o início.
+Projeto Supabase local (`npx supabase init`). O schema vive em `db/schemas.sql`
+(fonte da verdade, conforme `SKILL.md`) e é aplicado via as migrations em
+`migrations/`, na ordem:
 
-## O que eu não consigo fazer por você
+1. `20260709000000_initial_schema.sql` — schema v1 (histórico, já substituído).
+2. `20260725000000_replace_schema_noos_v2.sql` — derruba o v1 e cria o schema
+   atual: `profiles`, `notes`, `tags`, `note_tags`, `note_links`,
+   `external_references`, `link_suggestions`, `note_embeddings`,
+   `pomodoro_sessions`, `life_areas`, `projects`, `tasks`, `habits`,
+   `habit_logs`, `goals`, `rewards`, `calendar_connections`,
+   `calendar_events`, `ai_insights`.
+3. `20260726000000_search_notes_rpc.sql` — RPC `search_notes` (busca full-text).
+4. `20260727000000_knowledge_graph_rpc.sql` — RPC `get_knowledge_graph`.
+5. `20260728000000_match_note_embeddings_rpc.sql` — RPC auxiliar de
+   similaridade vetorial, usada por `suggest-note-connections`.
 
-Criar o projeto Supabase de fato exige login na sua conta — isso só você pode
-fazer. Depois disso, aplicar a migration é rápido.
+## Aplicar uma migration nova
 
-### 1. Criar o projeto (uma vez)
+Sempre que eu adicionar um arquivo novo em `migrations/`, aplique assim:
 
-1. Acesse [supabase.com/dashboard](https://supabase.com/dashboard) e crie um
-   projeto novo (nome sugerido: `noos`, região mais próxima de você).
-2. Guarde a **senha do banco** que você definir na criação — vai precisar
-   dela pra linkar o projeto local.
-3. Em **Project Settings → API**, anote:
-   - `Project URL`
-   - `anon public key`
-   (vamos usar essas duas no `.env.local` quando o Next.js for criado no
-   próximo passo — não precisa fazer nada com elas ainda.)
+**Opção A — SQL Editor (mais simples)**
+Abra o arquivo da migration mais recente, copie o conteúdo inteiro (`Ctrl+A`,
+`Ctrl+C` no VSCode — nunca cole o caminho/nome do arquivo), cole no
+**SQL Editor** do painel do Supabase e rode.
 
-### 2. Aplicar a migration
-
-Duas formas — escolha a que for mais rápida pra você agora:
-
-**Opção A — colar no SQL Editor do dashboard (mais simples, sem instalar nada)**
-Abra `migrations/20260709000000_initial_schema.sql` neste projeto, copie o
-conteúdo inteiro, cole no **SQL Editor** do painel do Supabase e rode.
-
-**Opção B — via CLI (melhor se formos criar mais migrations depois)**
+**Opção B — CLI**
 ```bash
 npx supabase login
 npx supabase link --project-ref szaqbacpousjlxsttetj
 npx supabase db push
 ```
-(`login` e `link` são interativos — pedem autenticação no navegador e a senha
-do banco que você definiu na criação do projeto — por isso rodam no seu
-terminal, não por aqui.)
 
-### 3. Conferir
+## Edge Functions
 
-No painel do Supabase, em **Table Editor**, as 16 tabelas devem aparecer, e
-em **Authentication → Policies** cada uma deve mostrar 1 policy (`*_owner`)
-com RLS habilitado.
+Três funções em `functions/`, todas em Deno/TypeScript:
 
-## Por que o schema é assim
+- **`import-note`** — importação incremental (Notion/Obsidian): cria a nota,
+  extrai `[[wikilinks]]` do conteúdo virando `note_links`, aplica tags e
+  referências externas, e dispara `generate-note-embedding`.
+- **`generate-note-embedding`** — gera o embedding (OpenAI
+  `text-embedding-3-small`) do título+conteúdo e grava em `note_embeddings`
+  (via service role — RLS dessa tabela só libera SELECT ao dono).
+- **`suggest-note-connections`** — usa a RPC `match_note_embeddings` pra achar
+  vizinhos semânticos e grava `link_suggestions` pendentes (ignora pares já
+  linkados ou já sugeridos).
 
-- **`area`** é a taxonomia única compartilhada por notas, listas e hábitos —
-  ver seção "Modelo de dados" do plano de arquitetura.
-- **`list` faz dupla função** de lista simples e Projeto: quando `goal`,
-  `status` e `due_date` estão preenchidos, é um Projeto; senão, é só uma
-  lista de tarefas. Progresso é sempre calculado a partir de `task`, nunca
-  armazenado.
-- **PARA (Projetos/Áreas/Recursos/Arquivos) não tem tabela própria** — é uma
-  view computada sobre `list.status`, `area` e `note.area_id`.
-- **`note.status = 'inbox'`** é onde toda captura rápida nasce (sem área
-  definida); a revisão semanal (ainda não construída) é o que promove pra
-  `'permanent'` — fluxo Zettelkasten fleeting → permanent note.
-- Todo `link` aponta por `note_id`, nunca por título — renomear uma nota
-  nunca quebra um backlink (aprendizado direto da doc do Notion).
+### O que só você consegue fazer
+
+**1. Configurar a chave da OpenAI como secret** (nunca no código/frontend):
+```bash
+npx supabase secrets set OPENAI_API_KEY=sk-...
+```
+Pegue a chave em [platform.openai.com/api-keys](https://platform.openai.com/api-keys).
+
+**2. Deployar as três funções** (exige `login`/`link` já feitos, acima):
+```bash
+npx supabase functions deploy import-note
+npx supabase functions deploy generate-note-embedding
+npx supabase functions deploy suggest-note-connections
+```
+
+`SUPABASE_URL`, `SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY` já ficam
+disponíveis automaticamente dentro de toda Edge Function — não precisa
+configurar esses três.
+
+### Conferir
+
+- **Authentication → Policies**: cada tabela com RLS habilitado e as policies
+  esperadas (ver `docs/ESTRUTURA.md` §2 para as exceções de `note_embeddings`,
+  `link_suggestions`, `rewards`, `ai_insights`, `calendar_connections`).
+- **Edge Functions** no painel: as três aparecendo como deployadas, com log
+  de invocação depois do primeiro teste (importar uma nota ou salvar uma nota
+  em `/notes/:id` no app).

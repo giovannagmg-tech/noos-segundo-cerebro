@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Select,
@@ -11,9 +13,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { TagPill } from '@/components/TagPill'
 import { createNote, listNotes, listNotesByTag, searchNotes } from '@/lib/api/notes'
 import { listTags, type TagWithCount } from '@/lib/api/tags'
+import { importNote } from '@/lib/api/suggestions'
 import type { NoteWithTags, SearchResult } from '@/lib/api/types'
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -103,9 +114,12 @@ export default function Notes() {
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">Suas notas</h1>
-        <Button onClick={handleNewNote} disabled={creating}>
-          + Nova nota
-        </Button>
+        <div className="flex gap-2">
+          <ImportNoteDialog onImported={(noteId) => navigate(`/notes/${noteId}`)} />
+          <Button onClick={handleNewNote} disabled={creating}>
+            + Nova nota
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -265,5 +279,81 @@ function renderSnippet(snippet: string) {
     ) : (
       part
     ),
+  )
+}
+
+function ImportNoteDialog({ onImported }: { onImported: (noteId: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const [source, setSource] = useState<'notion' | 'obsidian'>('notion')
+  const [title, setTitle] = useState('')
+  const [content, setContent] = useState('')
+  const [importing, setImporting] = useState(false)
+
+  async function handleImport() {
+    if (!title.trim() || !content.trim()) return
+    setImporting(true)
+    try {
+      const result = await importNote({ title: title.trim(), content, source })
+      const unresolved = result.unresolved_links.length
+      toast.success(
+        `Nota importada — ${result.created_links} link(s) criado(s)` +
+          (unresolved ? `, ${unresolved} título(s) não encontrado(s)` : ''),
+      )
+      setOpen(false)
+      setTitle('')
+      setContent('')
+      onImported(result.note_id)
+    } catch (err) {
+      console.error(err)
+      toast.error('Falha ao importar — confira se as Edge Functions estão deployadas.')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline">Importar do Notion/Obsidian</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Importar nota</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-4">
+          <div className="grid gap-2">
+            <Label>Origem</Label>
+            <Select value={source} onValueChange={(v) => setSource(v as 'notion' | 'obsidian')}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="notion">Notion</SelectItem>
+                <SelectItem value="obsidian">Obsidian</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="import-title">Título</Label>
+            <Input id="import-title" value={title} onChange={(e) => setTitle(e.target.value)} />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="import-content">Conteúdo</Label>
+            <Textarea
+              id="import-content"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              rows={10}
+              placeholder="Cole o conteúdo markdown aqui. [[Título de outra nota]] vira link automaticamente."
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button onClick={handleImport} disabled={importing}>
+            {importing ? 'Importando...' : 'Importar'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

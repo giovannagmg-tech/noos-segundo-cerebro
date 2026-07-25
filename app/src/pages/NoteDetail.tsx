@@ -40,6 +40,13 @@ import {
 } from '@/lib/api/notes'
 import { createTag, listTags, type TagWithCount } from '@/lib/api/tags'
 import { nextTagColor } from '@/lib/tag-colors'
+import {
+  acceptSuggestion,
+  dismissSuggestion,
+  generateEmbeddingAndSuggestions,
+  listSuggestionsForNote,
+  type PendingSuggestion,
+} from '@/lib/api/suggestions'
 import type { ExternalReference, Note, NoteLink, NoteWithTags } from '@/lib/api/types'
 
 type SaveState = 'idle' | 'saving' | 'saved'
@@ -62,6 +69,7 @@ export default function NoteDetail() {
     incoming: (NoteLink & { source: Note })[]
   }>({ outgoing: [], incoming: [] })
   const [refs, setRefs] = useState<ExternalReference[]>([])
+  const [suggestions, setSuggestions] = useState<PendingSuggestion[]>([])
 
   const [tagPopoverOpen, setTagPopoverOpen] = useState(false)
   const [linkPopoverOpen, setLinkPopoverOpen] = useState(false)
@@ -74,12 +82,13 @@ export default function NoteDetail() {
     setLoading(true)
     setNotFound(false)
     try {
-      const [n, tags, notes, noteLinks, references] = await Promise.all([
+      const [n, tags, notes, noteLinks, references, pendingSuggestions] = await Promise.all([
         getNote(id),
         listTags(),
         listNotes(),
         listLinksForNote(id),
         listExternalReferences(id),
+        listSuggestionsForNote(id).catch(() => []),
       ])
       if (!n) {
         setNotFound(true)
@@ -92,6 +101,7 @@ export default function NoteDetail() {
       setAllNotes(notes)
       setLinks(noteLinks)
       setRefs(references)
+      setSuggestions(pendingSuggestions)
     } catch (err) {
       console.error(err)
       toast.error('Falha ao carregar a nota.')
@@ -130,6 +140,32 @@ export default function NoteDetail() {
     } catch {
       toast.error('Falha ao salvar a nota.')
       setSaveState('idle')
+      return
+    }
+    // Melhor esforço: gera embedding + sugestões de conexão em segundo plano.
+    // Se as Edge Functions ainda não estiverem deployadas, falha em silêncio.
+    generateEmbeddingAndSuggestions(id)
+      .then(() => listSuggestionsForNote(id))
+      .then(setSuggestions)
+      .catch((err) => console.error('IA de conexões indisponível:', err))
+  }
+
+  async function handleAcceptSuggestion(s: PendingSuggestion) {
+    try {
+      await acceptSuggestion(s)
+      setSuggestions((prev) => prev.filter((x) => x.id !== s.id))
+      setLinks(await listLinksForNote(id!))
+    } catch {
+      toast.error('Falha ao aceitar sugestão.')
+    }
+  }
+
+  async function handleDismissSuggestion(suggestionId: string) {
+    try {
+      await dismissSuggestion(suggestionId)
+      setSuggestions((prev) => prev.filter((x) => x.id !== suggestionId))
+    } catch {
+      toast.error('Falha ao dispensar sugestão.')
     }
   }
 
@@ -333,6 +369,40 @@ export default function NoteDetail() {
           </ul>
         )}
       </section>
+
+      {suggestions.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h2 className="text-sm font-medium text-muted-foreground">Sugestões da IA</h2>
+          <ul className="flex flex-col divide-y rounded-lg border">
+            {suggestions.map((s) => (
+              <li key={s.id} className="flex flex-col gap-2 px-4 py-3">
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    onClick={() => navigate(`/notes/${s.otherNoteId}`)}
+                    className="text-left text-sm font-medium hover:underline"
+                  >
+                    {s.otherNoteTitle}
+                  </button>
+                  {s.score !== null && (
+                    <span className="text-xs text-muted-foreground">
+                      {Math.round(s.score * 100)}% similar
+                    </span>
+                  )}
+                </div>
+                {s.reason && <p className="text-xs text-muted-foreground">{s.reason}</p>}
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={() => handleAcceptSuggestion(s)}>
+                    Aceitar
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => handleDismissSuggestion(s.id)}>
+                    Descartar
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
