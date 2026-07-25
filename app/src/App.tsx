@@ -18,6 +18,10 @@ import Habits from '@/pages/Habits'
 import Goals from '@/pages/Goals'
 import Metrics from '@/pages/Metrics'
 import Rewards from '@/pages/Rewards'
+import Agenda from '@/pages/Agenda'
+import CalendarPage from '@/pages/Calendar'
+import Insights from '@/pages/Insights'
+import Settings from '@/pages/Settings'
 
 function App() {
   return (
@@ -41,6 +45,10 @@ function App() {
               <Route path="/goals" element={<Goals />} />
               <Route path="/metrics" element={<Metrics />} />
               <Route path="/rewards" element={<Rewards />} />
+              <Route path="/agenda" element={<Agenda />} />
+              <Route path="/calendar" element={<CalendarPage />} />
+              <Route path="/insights" element={<Insights />} />
+              <Route path="/settings" element={<Settings />} />
             </Route>
             <Route path="/" element={<Navigate to="/notes" replace />} />
             <Route path="*" element={<Navigate to="/notes" replace />} />

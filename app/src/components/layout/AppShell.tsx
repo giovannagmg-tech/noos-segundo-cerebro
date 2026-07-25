@@ -36,6 +36,10 @@ const fase2Nav = [
   { to: '/goals', label: 'Metas' },
   { to: '/metrics', label: 'Métricas' },
   { to: '/rewards', label: 'Recompensas' },
+  { to: '/agenda', label: 'Agenda' },
+  { to: '/calendar', label: 'Calendário' },
+  { to: '/insights', label: 'Insights' },
+  { to: '/settings', label: 'Configurações' },
 ]
 
 export function AppShell() {
